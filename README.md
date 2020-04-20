@@ -1,4 +1,4 @@
-# POO_Tema8
+# POO proiect 2 Tema8
 
 Pizzeria X testează un nou soft, dezvoltat în maniera OOP, pentru gestionarea
 activității sale. Codul propriu-zis contine o clasa abstracta care contine doar metoda virtuala
