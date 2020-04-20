@@ -39,7 +39,7 @@ incasata din vanzarea acestora.
 6. citirea informațiilor complete a n obiecte, memorarea și afișarea acestora
 
 
-● cerințe generale aplicate fiecărei teme din acest fișier:
+# Cerințe generale aplicate fiecărei teme din acest fișier:
 
 - să se identifice și să se implementeze ierarhia de clase;
 
