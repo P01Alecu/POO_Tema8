@@ -19,18 +19,20 @@ float abstract::calcul(int km = 0, bool online = false){
 ///////////////////////////////////pizza
 class pizza:protected abstract{
 protected:
+    static int numar_total_pizza;
     int id_pizza;
     string nume;
-    int index;  //incrementat automat la vanzarea unui produs
+    int index;  //incrementat automat la vanzarea unui produs prin +=
 //ingrediente\/
     int numar_ingrediente;
     bool alocat = false;    //retine daca s-a alocat memorie ptr ingrediente, cantitatea lor si pret
     string *ingrediente;     //denumiri ingrediente
     int *cantitate_ingrediente;
     int *pret_unitar;
+    bool vegetariana;
 
 public:
-    pizza(int, string, int, string*, int*, int*);
+    pizza(int, string, bool, int, string*, int*, int*);
     ~pizza();
 
     void citire(istream& in);
@@ -39,7 +41,7 @@ public:
     friend ostream& operator<<(ostream&, pizza&);
     void operator=(const pizza&);
     float calcul(int, bool);
-    int id(){
+    int id() const{
         return id_pizza;}
 
     bool operator<(pizza& p){
@@ -49,11 +51,23 @@ public:
     int get_index(){
         return index;
     };
+    static int static_pizza(){
+        return numar_total_pizza;
+    };
+    bool e_vegetariana(){
+        return vegetariana;
+    }
+
+
 };
-pizza::pizza(int id_pizza = 0, string nume = "", int numar_ingrediente = 0, string* ingrediente = NULL, int* cantitate_ingrediente = NULL,int* pret_unitar = NULL){
+int pizza::numar_total_pizza = 0;
+pizza::pizza(int id_pizza = 0, string nume = "", bool vegetariana = false,int numar_ingrediente = 0, string* ingrediente = NULL, int* cantitate_ingrediente = NULL,int* pret_unitar = NULL){
     index = 0;
     this->id_pizza = id_pizza;
+    if(id_pizza!=0 || nume != "")
+        numar_total_pizza++;        //incrementare numar_total_pizza
     this->nume = nume;
+    this->vegetariana = vegetariana;
     try{
         if(numar_ingrediente<0)
             throw numar_ingrediente;
@@ -92,7 +106,6 @@ pizza::~pizza(){
     //delete[] ingrediente;
     //delete[] cantitate_ingrediente;
     //delete[] pret_unitar;
-    cout << "\nDestructor\n";
 }
 
 void pizza::citire(istream& in){
@@ -103,9 +116,12 @@ void pizza::citire(istream& in){
     catch(int c){
 
     }
+
     cout << "\nIntrodu numele pizzei: ";
     in >> nume;
-
+    numar_total_pizza++;    //inc numar_total_pizza
+    cout << "\nEste vegetariana? (0/1) ";
+    in >> vegetariana;
     cout << "\nIntrodu numarul ingredientelor: ";
     in >> numar_ingrediente;
     while(numar_ingrediente < 0){
@@ -164,7 +180,10 @@ ostream& operator<<(ostream& out, pizza& p){
 }
 void pizza::operator=(const pizza& p){
     id_pizza = p.id_pizza;
+    if(id_pizza!=0)
+        numar_total_pizza++;
     nume = p.nume;
+    vegetariana = p.vegetariana;
     numar_ingrediente = p.numar_ingrediente;
     if(numar_ingrediente > 0){
         if(alocat){
@@ -190,8 +209,10 @@ float pizza::calcul(int km = 0, bool online = false){
         for(int i=0; i<numar_ingrediente; i++)
             temp += cantitate_ingrediente[i]*pret_unitar[i];
     if(online)
-        while(km > 0)
+        while(km > 0){
             temp += temp*5/100;
+            km = km - 10;
+        }
     return temp;
 }
 
@@ -260,6 +281,7 @@ public:
 
         while(i != g.v[0].end()){
             out << (i->second).front();
+            out << "\tPret de baza (fara livrare): " << ((i->second).front()).calcul() << endl;
             i++;
         }
         return out;
@@ -271,7 +293,7 @@ public:
     void operator=(meniu& p){
         unordered_map<int, list<pizza>>::iterator i = p.v[0].begin();
         while(i != p.v[0].end()){
-            v[0][p.v[0].first] = p.v[0].second;
+            v[0][i->first] = i->second;
             i++;
         }
 
@@ -291,15 +313,63 @@ public:
         }
         return numar;
     }
+    float pret(int id=0, int km=0, int online=false){   //returneaza pretul unei pizza oferindu-i id-ul pizzei (si eventual km si online)
+        if(v[0].find(id) != v[0].end())
+            return (v[0][id]).front().calcul(km, online);
+        return 0;
+    }
+
+    void comanda(){ //cumpara produs
+        cout << "Introdu id-ul pizzei pe care vrei sa o cumperi: ";
+        int id;
+        cin >> id;
+
+        if(v[0].find(id) != v[0].end()){
+            cout << "Aceasta pizza costa: " << (v[0][id]).front().calcul() << " lei.\n";
+            (v[0][id]).front() += 1;
+        }
+        else
+            cout << "Acest id nu exista in meniu!";
+    }
+    void comanda_online(){
+        cout << "Introdu id-ul pizzei pe care vrei sa o cumperi: ";
+        int id;
+        cin >> id;
+
+        if(v[0].find(id) != v[0].end()){
+            int km;
+            cout << "Introdu nr km: ";
+            cin >> km;
+            cout << "\nAceasta pizza costa: " << (v[0][id]).front().calcul(km, true) << " lei.\n";
+            (v[0][id]).front() += 1;
+        }
+        else
+            cout << "Acest id nu exista in meniu!";
+    }
+    float venit_vegetarian(){
+        unordered_map<int, list<pizza>>::iterator i = v[0].begin();
+        float temp = 0;
+        while(i != v[0].end()){
+            if((i->second).front().e_vegetariana())
+                temp += (i->second).front().get_index() * (i->second).front().calcul();
+            i++;
+        }
+        if(temp == 0)
+            cout << "Nu s-a vandut nicio pizza vegetariana.\n";
+        return temp;
+    }
+    float venit(){
+        unordered_map<int, list<pizza>>::iterator i = v[0].begin();
+        float temp = 0;
+        while(i != v[0].end()){
+            temp += (i->second).front().get_index() * (i->second).front().calcul();
+            i++;
+        }
+        if (temp==0)
+            cout << "Nu s-a vandut inca nicio pizza.\n";
+        return temp;
+    }
 };
-
-
-
-
-
-
-
-
 
 
 
@@ -311,7 +381,11 @@ void menu_output(){
     cout << "1. Adauga produse in meniu.\n";
     cout << "2. Afisaza produsele din meniu.\n";
     cout << "3. Afisaza cate pizza sunt in meniu. --Folosind dynamic cast\n";
-    cout << "4. \n";
+    cout << "4. Afisaza numarul de pizza citite in total (in tot programul). --Folosire variabila si metoda statica...\n";
+    cout << "5. Comanda o pizza. \n";
+    cout << "6. Comanda o pizza ONLINE.\n";
+    cout << "7. Afisaza venitul din vanzarea de pizza.\n";
+    cout << "8. Afisaza venitul din vanzarea de pizza vegetariana.\n";
     cout << "\n0. Iesire\n";
 }
 void menu(){
@@ -333,6 +407,23 @@ void menu(){
             cout << "In meniu sunt " << p.get_pizza() << " pizza.\n";
             break;
         }
+        case 4:
+            cout << "Numarul de pizza citite in total: " << pizza::static_pizza() << ".\n";
+            break;
+        case 5:
+            cout << p;
+            p.comanda();
+            break;
+        case 6:
+            cout << p;
+            p.comanda_online();
+            break;
+        case 7:
+            cout << p.venit() << endl;
+            break;
+        case 8:
+            cout << p.venit_vegetarian() << endl;
+            break;
         default:
             cout << "Input invalid!!\n";
         }
@@ -344,50 +435,6 @@ void menu(){
 
 int main()
 {
-/*
-    string *temp_nume = new string[2];
-    temp_nume[0] = "Ardei gras";
-    temp_nume[1] = "Carnati";
-    int *temp_cantitate = new int [2];
-    temp_cantitate[0] = 1;
-    temp_cantitate[1] = 2;
-    int *temp_pret = new int [2];
-    temp_pret[0] = 1;
-    temp_pret[1] = 1;
-    pizza a1(1, "Capriciosa", 2, temp_nume, temp_cantitate, temp_pret);
-    //cout << a1;
-    temp_nume[0] = "Jalapenos";
-    temp_nume[1] = "Mozzarella";
-    temp_cantitate[0] = 1;
-    temp_cantitate[1] = 2;
-    temp_pret[0] = 2;
-    temp_pret[1] = 3;
-    pizza a2(2, "Pepperoni", 2, temp_nume, temp_cantitate, temp_pret);
-    //cout << a2;
-    delete[] temp_nume;
-    delete[] temp_cantitate;
-    delete[] temp_pret;
-
-*/
-
     menu();
-
-
-    //pizza a1(1,"nume1");
-    /*
-    pizza a2(2,"nume2");
-    a.push_back(a1);
-    a.push_back(a2);
-
-    //iterator
-    list <pizza>::iterator i;
-    for(i=a.begin(); i != a.end(); i++)
-        cout << *i;
-    a.sort();
-    //dupa sortare
-    for(i=a.begin(); i != a.end(); i++)
-        cout << *i;
-    meniu <pizza> q;
-    */
-    return 0;
+   return 0;
 }
